@@ -1,0 +1,626 @@
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:          pve-firewall
+# Required-Start:    mountkernfs ifupdown $local_fs $syslog
+# Required-Stop:     
+# Should-Start:      
+# Should-Stop:       
+# X-Start-Before:    networking
+# X-Stop-After:      
+# Default-Start:     S
+# Default-Stop:      0 1 6
+# X-Interactive:     false
+# Short-Description: Proxmox VE Hypervisor and VM firewall
+# Description:       Apply firewalling rules for Proxmox Virtual Environment hypervisor and virtual machines
+### END INIT INFO
+
+#################################################
+#	Configuration files and vars
+#################################################
+
+CONF_DIR='/etc/pve-firewall'
+
+GLOBAL_CONF_FILE='global.conf'
+
+ROUTED_CONF_FILENAME='routed.rules'
+BRIDGED_CONF_FILENAME='bridged.rules'
+COMMON_BRIDGED_CONF_FILENAME='common_bridged.rules'
+HYPERVISOR_CONF_FILENAME='hypervisor.rules'
+MACROS_FILENAME='macros'
+
+SYSCTL_PVE_CONF_FILE='/etc/sysctl.d/pve.conf'
+
+# LSB Standards return codes
+OK=0
+ERR=1
+INVALID_ARG=2
+
+function ERR_MSG () {
+	echo $1
+	logger "pve-firewall: $1" 2> /dev/null
+}
+
+# LOAD GLOBAL CONFIGURATION
+if [ -r $CONF_DIR/$GLOBAL_CONF_FILE ]; then
+	source $CONF_DIR/$GLOBAL_CONF_FILE;
+
+	# This parameter is required
+	if [ -z "$PROXMOX_ADDR" ]; then
+		ERR_MSG "FATAL: host node IP Address not defined ! Please set PROXMOX_ADDR in $CONF_DIR/$GLOBAL_CONF_FILE "
+		exit 1;
+	fi
+
+	# Load default values
+	if [ -z "$IP_FORWARD" ]; then IP_FORWARD=0; fi
+	if [ -z "$LOG_INVALID_PACKETS" ]; then LOG_INVALID_PACKETS=0; fi
+
+	if [ -z "$HYPERVISOR_BLOCK_XMAS_SCAN" ]; then HYPERVISOR_BLOCK_XMAS_SCAN=0; fi
+	if [ -z "$HYPERVISOR_BLOCK_NULL_SCAN" ]; then HYPERVISOR_BLOCK_NULL_SCAN=0; fi
+	if [ -z "$HYPERVISOR_BLOCK_FIN_SCAN" ]; then HYPERVISOR_BLOCK_FIN_SCAN=0; fi
+
+	if [ -z "$BRIDGED_VM_BLOCK_XMAS_SCAN" ]; then BRIDGED_VM_BLOCK_XMAS_SCAN=0; fi
+	if [ -z "$BRIDGED_VM_BLOCK_NULL_SCAN" ]; then BRIDGED_VM_BLOCK_NULL_SCAN=0; fi
+	if [ -z "$BRIDGED_VM_BLOCK_FIN_SCAN" ]; then BRIDGED_VM_BLOCK_FIN_SCAN=0; fi
+
+	if [ -z "$HYPERVISOR_STRICT_SYN" ]; then HYPERVISOR_STRICT_SYN=0; fi
+	if [ -z "$BRIDGED_VM_STRICT_SYN" ]; then BRIDGED_VM_STRICT_SYN=0; fi
+
+	if [ -z "$COMMON_VM_CHAIN" ]; then COMMON_VM_CHAIN='common_vm_newin'; fi
+	if [ -z "$VM_CHAIN" ]; then VM_CHAIN='vm_newin'; fi
+	if [ -z "$LOGDROP_CHAIN" ]; then LOGDROP_CHAIN='log_drop'; fi
+	if [ -z "$PROXMOX_CHAIN" ]; then PROXMOX_CHAIN='proxmox_newin'; fi
+
+	if [ -z "$IPTABLES" ]; then IPTABLES='/sbin/iptables'; fi;
+
+else
+	ERR_MSG "FATAL: CANNOT FIND $CONF_DIR/$GLOBAL_CONF_FILE !"
+	exit 1
+fi
+
+# Check configuration files are present
+if [ ! -r $CONF_DIR/$ROUTED_CONF_FILENAME ]; then
+	ERR_MSG "FATAL: Cannot find $CONF_DIR/$ROUTED_CONF_FILENAME !"
+	exit 1;
+fi
+
+if [ ! -r $CONF_DIR/$BRIDGED_CONF_FILENAME ]; then
+	ERR_MSG "FATAL: Cannot find $CONF_DIR/$BRIDGED_CONF_FILENAME !"
+	exit 1;
+fi
+
+if [ ! -r $CONF_DIR/$COMMON_BRIDGED_CONF_FILENAME ]; then
+	ERR_MSG "FATAL: Cannot find $CONF_DIR/$COMMON_BRIDGED_CONF_FILENAME !"
+	exit 1;
+fi
+
+if [ ! -r $CONF_DIR/$HYPERVISOR_CONF_FILENAME ]; then
+	ERR_MSG "FATAL: Cannot find $CONF_DIR/$HYPERVISOR_CONF_FILENAME !"
+	exit 1;
+fi
+
+# Load user defined macros
+#if [ -r $CONF_DIR/$MACROS_FILENAME ]; then
+#	source $CONF_DIR/$MACROS_FILENAME
+#else
+#	ERR_MSG "WARNING: Cannot find $CONF_DIR/$MACROS_FILENAME !"
+#fi
+
+# Apply user defined bridged vm rules
+function APPLY_BRIDGED_VM_RULES {
+	
+	source $CONF_DIR/$BRIDGED_CONF_FILENAME
+}
+
+function APPLY_ROUTED_VM_RULES {
+
+	source $CONF_DIR/$ROUTED_CONF_FILENAME
+}
+
+# Apply hypervisor rules
+function APPLY_HYPERVISOR_RULES {
+
+	#####################################
+	#	ACCEPT KNOWN PACKETS
+	#####################################
+
+	# accept immediatly open sessions
+	$IPTABLES --table filter --append INPUT -m conntrack --ctstate RELATED,ESTABLISHED --jump ACCEPT
+
+	############################################
+	#	LOG AND DROP STRANGE TCP PACKETS
+	############################################
+
+	# DROP XMAS Scan
+	if [ $HYPERVISOR_BLOCK_XMAS_SCAN -eq 1 ]; then
+		$IPTABLES --table filter --append INPUT --protocol tcp --tcp-flags FIN,URG,PSH FIN,URG,PSH --jump $LOGDROP_CHAIN
+		$IPTABLES --table filter --append INPUT --protocol tcp --tcp-flags ALL ALL --jump $LOGDROP_CHAIN;
+	fi
+
+	# DROP NULL Scan
+	if [ $HYPERVISOR_BLOCK_NULL_SCAN -eq 1 ]; then
+		$IPTABLES --table filter --append INPUT --protocol tcp --tcp-flags ALL NONE --jump $LOGDROP_CHAIN;
+	fi
+
+	# DROP FIN Scan
+	if [ $HYPERVISOR_BLOCK_FIN_SCAN -eq 1 ]; then
+		$IPTABLES --table filter --append INPUT --protocol tcp --tcp-flags ALL FIN --jump $LOGDROP_CHAIN;
+	fi
+
+	# STRICT_SYN
+	# DROP if SYN is not set, NEXT RULES WORK ON NEW CONNECTIONS ONLY !!!
+	if [ $HYPERVISOR_STRICT_SYN -eq 1 ]; then
+		$IPTABLES --table filter --append INPUT --protocol tcp ! --tcp-flags ALL SYN --jump $LOGDROP_CHAIN;
+	fi
+
+	#########################################
+	#	FILTER NEW CONNECTIONS
+	#########################################
+
+	# Filter new connections (TCP, UDP, ICMP, ...)
+	$IPTABLES --table filter --append INPUT -m conntrack --ctstate NEW --jump $PROXMOX_CHAIN
+
+	# PEER Proxmox rules
+	for PROXMOX_PEER in $PROXMOX_PEERS
+	do
+		# SSH
+		$IPTABLES --table filter --append $PROXMOX_CHAIN --source $PROXMOX_PEER --protocol tcp --dport 22 --jump ACCEPT;
+
+		# Corosync
+
+		# etc...
+	done
+
+	# ALLOW ALL FOR LOOPBACK INTERFACE
+	$IPTABLES --table filter --append $PROXMOX_CHAIN --in-interface lo --jump ACCEPT
+	$IPTABLES --table filter --append $PROXMOX_CHAIN --out-interface lo --jump ACCEPT
+
+	# Apply hypervisor user rules
+	source $CONF_DIR/$HYPERVISOR_CONF_FILENAME	
+}
+
+# common rules for VMs
+function APPLY_VM_COMMON_RULES {
+
+	##############################################
+	#	ACCEPT KNOWN PACKETS
+	##############################################
+
+	# Immediatly accept opened sessions
+	$IPTABLES --table filter --append FORWARD -m conntrack --ctstate RELATED,ESTABLISHED --jump ACCEPT
+
+	######################################
+	#	DROP STRANGE PACKETS
+	######################################
+
+	# DROP XMAS Scan
+	if [ "$BRIDGED_VM_BLOCK_XMAS_SCAN" -eq "1" ]; then
+		$IPTABLES --table filter --append FORWARD --protocol tcp --tcp-flags FIN,URG,PSH FIN,URG,PSH --jump $LOGDROP_CHAIN
+		$IPTABLES --table filter --append FORWARD --protocol tcp --tcp-flags ALL ALL --jump $LOGDROP_CHAIN;
+	fi
+
+	# DROP NULL Scan
+	if [ "$BRIDGED_VM_BLOCK_NULL_SCAN" -eq "1" ]; then
+		$IPTABLES --table filter --append FORWARD --protocol tcp --tcp-flags ALL NONE --jump $LOGDROP_CHAIN;
+	fi
+
+	# DROP FIN Scan
+	if [ "$BRIDGED_VM_BLOCK_FIN_SCAN" -eq "1" ]; then
+		$IPTABLES --table filter --append FORWARD --protocol tcp --tcp-flags ALL FIN --jump $LOGDROP_CHAIN
+	fi
+
+	# STRICT SYN
+	# DROP if SYN is not set, NEXT RULES WORK ON NEW CONNECTIONS ONLY !!!
+	if [ "$BRIDGED_VM_STRICT_SYN" -eq "1" ]; then
+		$IPTABLES --table filter --append FORWARD --protocol tcp ! --tcp-flags ALL SYN --jump $LOGDROP_CHAIN
+	fi
+
+	# New connections (TCP, UDP, ICMP, ...) go to COMMON_VM_CHAIN
+	$IPTABLES --table filter --append FORWARD -m conntrack --ctstate NEW --jump $COMMON_VM_CHAIN
+
+	# Call common bridged vm rules
+	source $CONF_DIR/$COMMON_BRIDGED_CONF_FILENAME
+}
+
+function ROUTED_VM_MASQUERADE {
+	$IPTABLES --table nat --append POSTROUTING --source $1 --jump MASQUERADE
+}
+
+function ROUTED_VM_ALLOW_TCP_PORT {
+	$IPTABLES --table nat --append PREROUTING --protocol tcp --dport $2 \
+	  --destination $PROXMOX_ADDR --jump DNAT --to-destination $1
+
+	$IPTABLES --table nat --append POSTROUTING --protocol tcp --sport $2 \
+	  --source $1 --jump SNAT --to-source $PROXMOX_ADDR
+}
+
+function ROUTED_VM_ALLOW_UDP_PORT {
+	$IPTABLES --table nat --append PREROUTING --protocol udp --dport $2 \
+	  --destination $PROXMOX_ADDR --jump DNAT --to-destination $1
+
+	$IPTABLES --table nat --append POSTROUTING --protocol udp --sport $2 \
+	  --source $1 --jump SNAT --to-source $PROXMOX_ADDR
+}
+
+function ROUTED_VM_ALLOW_PORT {
+	$IPTABLES --table nat --append PREROUTING --dport $2 --destination $PROXMOX_ADDR --jump DNAT --to-destination $1
+	$IPTABLES --table nat --append POSTROUTING --sport $2 --source $1 --jump SNAT --to-source $PROXMOX_ADDR
+}
+
+function ROUTED_VM_PROTECTED_TCP_PORT {
+	for TRUSTNET in $TRUSTNETS
+	do
+		$IPTABLES --table nat --append PREROUTING --source $TRUSTNET --protocol tcp \
+		  --dport $2 --destination $PROXMOX_ADDR --jump DNAT --to-destination $1
+
+		$IPTABLES --table nat --append POSTROUTING --destination $TRUSTNET --protocol tcp \
+		  --sport $2 --source $1 --jump SNAT --to-source $PROXMOX_ADDR
+	done
+}
+
+function ROUTED_VM_PROTECTED_UDP_PORT {
+	for TRUSTNET in $TRUSTNETS
+	do
+		$IPTABLES --table nat --append PREROUTING --source $TRUSTNET \
+		  --protocol udp --dport 80 --destination $PROXMOX_ADDR --jump DNAT --to-destination $1
+
+		$IPTABLES --table nat --append POSTROUTING --destination $TRUSTNET \
+		  --protocol udp --sport 80 --source $1 --jump SNAT --to-source $PROXMOX_ADDR
+	done
+}
+
+function ROUTED_VM_PROTECTED_PORT {
+	$IPTABLES --table nat --append PREROUTING --source $TRUSTNET --dport $2 \
+	  --destination $PROXMOX_ADDR --jump DNAT --to-destination $1
+
+	$IPTABLES --table nat --append POSTROUTING --destination $TRUSTNET --sport $2 \
+	  --source $1 --jump SNAT --to-source $PROXMOX_ADDR
+}
+
+function HYPERVISOR_ALLOW_PING {
+	$IPTABLES --table filter --insert INPUT 1 --protocol icmp \
+	  --icmp-type echo-request --jump ACCEPT
+}
+
+function HYPERVISOR_LIMIT_PING {
+	$IPTABLES --table filter --insert INPUT 1 --protocol icmp \
+	  --icmp-type echo-request -m limit --limit $1/m --jump ACCEPT
+}
+
+function HYPERVISOR_ALLOW_TCP_PORT {
+	$IPTABLES --table filter --append $PROXMOX_CHAIN --protocol tcp --dport $1 --jump ACCEPT
+}
+
+function HYPERVISOR_ALLOW_UDP_PORT {
+	$IPTABLES --table filter --append $PROXMOX_CHAIN --protocol udp --dport $1 --jump ACCEPT
+}
+
+function HYPERVISOR_ALLOW_PORT {
+	$IPTABLES --table filter --append $PROXMOX_CHAIN --protocol tcp --dport $1 --jump ACCEPT
+	$IPTABLES --table filter --append $PROXMOX_CHAIN --protocol udp --dport $1 --jump ACCEPT
+}
+
+function HYPERVISOR_PROTECTED_PING {
+	for TRUSTNET in $TRUSTNETS
+	do
+		$IPTABLES --table filter --insert INPUT 1 --source $TRUSTNET \
+		  --protocol icmp --icmp-type echo-reply --jump ACCEPT
+	done
+}
+
+function HYPERVISOR_PROTECTED_LIMIT_PING {
+	for TRUSTNET in $TRUSTNETS
+	do 
+		$IPTABLES --table filter --insert INPUT 1 --source $TRUSTNET \
+		  --protocol icmp --icmp-type echo-reply -m limit --limit $1/m --jump ACCEPT
+	done
+}
+
+function HYPERVISOR_PROTECTED_TCP_PORT {
+	for TRUSTNET in $TRUSTNETS
+	do
+		$IPTABLES --table filter --append $PROXMOX_CHAIN --source $TRUSTNET \
+		  --protocol tcp --dport $1 --jump ACCEPT
+	done
+}
+
+function HYPERVISOR_PROTECTED_UDP_PORT {
+	for TRUSTNET in $TRUSTNETS
+	do
+		$IPTABLES --table filter --append $PROXMOX_CHAIN --source $TRUSTNET \
+		  --protocol udp --dport $1 --jump ACCEPT
+	done
+}
+
+function HYPERVISOR_PROTECTED_PORT {
+	for TRUSTNET in $TRUSTNETS
+	do
+		$IPTABLES --table filter --append $PROXMOX_CHAIN --source $TRUSTNET \
+		  --protocol tcp --dport $1 --jump ACCEPT
+		$IPTABLES --table filter --append $PROXMOX_CHAIN --source $TRUSTNET \
+		  --protocol udp --dport $1 --jump ACCEPT
+	done
+}
+
+function BRIDGED_VM_ALLOW_PING {
+	$IPTABLES --table filter --insert FORWARD 1 --destination $1 --protocol icmp \
+	  --icmp-type echo-request --jump ACCEPT
+}
+
+function BRIDGED_VM_LIMIT_PING {
+	$IPTABLES --table filter --insert FORWARD 1 --destination $1 --protocol icmp \
+	  --icmp-type echo-request -m limit --limit $2/m --jump ACCEPT
+}
+
+function BRIDGED_VM_ALLOW_TCP_PORT {
+	$IPTABLES --table filter --insert $VM_CHAIN 1 --destination $1 --protocol tcp \
+	  --dport $2 --jump ACCEPT
+}
+
+function BRIDGED_VM_ALLOW_UDP_PORT {
+	$IPTABLES --table filter --insert $VM_CHAIN 1 --destination $1 --protocol udp \
+	  --dport $2 --jump ACCEPT
+}
+
+function BRIDGED_VM_ALLOW_PORT {
+	$IPTABLES --table filter --insert $VM_CHAIN 1 --destination $1 --dport $2 --jump ACCEPT
+}
+
+function BRIDGED_VM_PROTECTED_PING {
+	for TRUSTNET in $TRUSTNETS
+	do
+		$IPTABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
+		  --destination $1 --protocol icmp --icmp-type echo-request --jump ACCEPT
+	done
+}
+
+function BRIDGED_VM_PROTECTED_LIMIT_PING {
+	for TRUSTNET in $TRUSTNETS
+	do
+		$IPTABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
+		  --destination $1 --protocol icmp --icmp-type echo-request -m limit --limit $2/m --jump ACCEPT
+	done
+}
+
+function BRIDGED_VM_PROTECTED_TCP_PORT {	
+	for TRUSTNET in $TRUSTNETS
+	do
+		$IPTABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
+		  --destination $1 --protocol tcp --dport $2 --jump ACCEPT
+	done
+}
+
+function BRIDGED_VM_PROTECTED_UDP_PORT {
+	for TRUSTNET in $TRUSTNETS
+	do
+		$IPTABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
+		  --destination $1 --protocol udp --dport $2 --jump ACCEPT
+	done
+}
+
+function BRIDGED_VM_PROTECTED_PORT {
+	for TRUSTNET in $TRUSTNETS
+	do
+		$IPTABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
+		  --destination $1 --dport $2 --jump ACCEPT
+	done
+}
+
+function COMMON_BRIDGED_VM_ALLOW_PING {
+	$IPTABLES --table filter --insert $COMMON_VM_CHAIN 1 --protocol icmp \
+	  --icmp-type echo-request --jump ACCEPT
+}
+
+function COMMON_BRIDGED_VM_LIMIT_PING {
+	$IPTABLES --table filter --append $COMMON_VM_CHAIN --protocol icmp \
+	  --icmp-type echo-request -m limit --limit $1/m --jump ACCEPT
+}
+
+function COMMON_BRIDGED_VM_ALLOW_TCP_PORT {
+	$IPTABLES --table filter --append $COMMON_VM_CHAIN --protocol tcp --dport $1 --jump ACCEPT
+}
+
+function COMMON_BRIDGED_VM_ALLOW_UDP_PORT {
+	$IPTABLES --table filter --append $COMMON_VM_CHAIN --protocol udp --dport $1 --jump ACCEPT
+}
+
+function COMMON_BRIDGED_VM_ALLOW_PORT {
+	$IPTABLES --table filter --append $COMMON_VM_CHAIN --dport $1 --jump ACCEPT
+}
+
+function COMMON_BRIDGED_VM_PROTECTED_PING {
+	for TRUSTNET in $TRUSTNETS
+	do
+		$IPTABLES --table filter --append $COMMON_VM_CHAIN --source $TRUSTNET \
+		  --protocol icmp --icmp-type echo-request --jump ACCEPT
+	done
+}
+
+function COMMON_BRIDGED_VM_PROTECTED_LIMIT_PING {
+	for TRUSTNET in $TRUSTNETS
+	do
+		$IPTABLES --table filter --append $COMMON_VM_CHAIN --source $TRUSTNET \
+		  --protocol icmp --icmp-type echo-request -m limit --limit $1/m --jump ACCEPT
+	done
+}
+
+function COMMON_BRIDGED_VM_PROTECTED_TCP_PORT {	
+	for TRUSTNET in $TRUSTNETS
+	do
+		$IPTABLES --table filter --append $COMMON_VM_CHAIN --source $TRUSTNET \
+		  --protocol tcp --dport $1 --jump ACCEPT
+	done
+}
+
+function COMMON_BRIDGED_VM_PROTECTED_UDP_PORT {
+	for TRUSTNET in $TRUSTNETS
+	do
+		$IPTABLES --table filter --append $COMMON_VM_CHAIN --source $TRUSTNET \
+		  --protocol udp --dport $1 --jump ACCEPT
+	done
+}
+
+function COMMON_BRIDGED_VM_PROTECTED_PORT {
+	for TRUSTNET in $TRUSTNETS
+	do
+		$IPTABLES --table filter --append $COMMON_VM_CHAIN --source $TRUSTNET \
+		  --dport $1 --jump ACCEPT
+	done
+}
+
+# Init firewall
+function INIT_FW {
+
+	# Enable IPTables for bridge
+	if [ -f $SYSCTL_PVE_CONF_FILE ]; then
+		# Change sysctl values
+		echo 'net.bridge.bridge-nf-call-ip6tables = 0' > $SYSCTL_PVE_CONF_FILE
+		echo 'net.bridge.bridge-nf-call-iptables = 1' >> $SYSCTL_PVE_CONF_FILE
+		echo 'net.bridge.bridge-nf-call-arptables = 0' >> $SYSCTL_PVE_CONF_FILE
+		echo 'net.bridge.bridge-nf-filter-vlan-tagged = 0' >> $SYSCTL_PVE_CONF_FILE
+
+		# Reload sysctl values
+		sysctl -p;
+		/etc/init.d/procps restart
+	else
+		ERR_MSG "FATAL: Cannot find $SYSCTL_PVE_CONF_FILE file !"
+		exit 1;
+	fi
+
+	# Create user chains
+	$IPTABLES --table filter --new-chain $PROXMOX_CHAIN
+	$IPTABLES --table filter --new-chain $COMMON_VM_CHAIN
+	$IPTABLES --table filter --new-chain $VM_CHAIN
+	$IPTABLES --table filter --new-chain $LOGDROP_CHAIN
+
+	# Init LOG_DROP user chain
+	if [ "$LOG_INVALID_PACKETS" -eq "1" ]; then
+		$IPTABLES --table filter --append $LOGDROP_CHAIN --jump LOG --log-prefix 'IPTABLES: ' --log-level info;
+	fi
+	$IPTABLES --table filter --append $LOGDROP_CHAIN --jump DROP
+
+	# Inspect common guest rules after specific guest rules.
+	# This permits to overide rules for each guest before default decisions are applied
+	$IPTABLES --table filter --append $VM_CHAIN --jump $COMMON_VM_CHAIN
+
+	# Enable ip_forward if required
+	if [ "$IP_FORWARD" -eq "1" ]; then
+		echo 1 > /proc/sys/net/ipv4/ip_forward &> /dev/null;
+	fi
+}
+
+
+function RESET_FW {
+
+	# Flush tables
+	$IPTABLES --table filter --flush
+	$IPTABLES --table mangle --flush
+	$IPTABLES --table nat --flush
+	$IPTABLES --table raw --flush
+
+	# Delete user chains
+	$IPTABLES --table filter --delete-chain
+
+}
+
+# "DROP" mode
+function MODE_DROP {
+	$IPTABLES --table filter --policy INPUT DROP
+	$IPTABLES --table filter --policy FORWARD DROP
+}
+
+# "ACCEPT" mode
+function MODE_ACCEPT {
+	$IPTABLES --table filter --policy INPUT ACCEPT
+	$IPTABLES --table filter --policy FORWARD ACCEPT
+}
+
+function DO_START {
+	RESET_FW
+	INIT_FW
+	APPLY_HYPERVISOR_RULES
+	APPLY_VM_COMMON_RULES
+	APPLY_BRIDGED_VM_RULES
+	MODE_DROP
+}
+
+function DO_STOP {
+	MODE_ACCEPT
+	RESET_FW
+}
+
+function SHOW_RULES {
+
+	echo "################################################"
+	echo "#               PROXMOX RULES"
+	echo "################################################"
+	echo ""
+	echo "Global rules:"
+	$IPTABLES --table filter --list INPUT --verbose --numeric
+	echo ""
+	echo "Specific rules:"
+	$IPTABLES --table filter --list $PROXMOX_CHAIN --verbose --numeric
+
+	echo "################################################"
+	echo "#               COMMON BRIDGED VM RULES"
+	echo "################################################"
+	echo ""
+	$IPTABLES --table filter --list $COMMON_VM_CHAIN --verbose --numeric
+
+	echo "################################################"
+	echo "#               BRIDGED VM RULES"
+	echo "################################################"
+	echo ""
+	echo "Global rules:"
+	$IPTABLES --table filter --list FORWARD --verbose --numeric
+	echo ""
+	echo "Specific rules:"
+	$IPTABLES --table filter --list $VM_CHAIN --verbose --numeric
+
+	echo "################################################"
+	echo "#              ROUTED VM RULES"
+	echo "################################################"
+	echo ""
+	$IPTABLES --table nat --list --verbose --numeric
+}
+
+case "$1" in
+	start)
+		echo -n "Starting firewall...  "
+		DO_START
+		echo "[OK]"
+		logger "Starting firewall"
+		exit $OK
+	;;
+	stop)
+		echo -n "Stopping firewall...  "
+		DO_STOP
+		echo "[OK]"	
+		logger '/!\ Stopping firewall !!! Be careful /!\ '
+		exit $OK
+	;;
+	restart)
+		echo -n "Restarting firewall...  "
+		DO_STOP
+		DO_START
+		echo "[OK]"
+		logger "Restarting firewall"
+		exit $OK
+	;;
+	force-reload)
+		echo -n "Restarting firewall...  "
+		DO_STOP
+		DO_START
+		echo "[OK]"
+		logger "Restarting firewall"
+		exit $OK
+	;;
+	status)
+		SHOW_RULES
+		exit $OK
+	;;
+	*)
+		echo "Usage: $0 {start|stop|restart|force-reload|status}"
+		exit $INVALID_ARG
+	;;
+esac

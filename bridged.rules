@@ -1,0 +1,23 @@
+#####################################################
+#
+#	Bridged Virtual Machines Firewall Rules
+#
+#####################################################
+#
+# Available rules:
+# - BRIDGED_VM_ALLOW_TCP_PORT address port
+# - BRIDGED_VM_ALLOW_UDP_PORT address port
+# - BRIDGED_VM_ALLOW_PORT address
+#
+# You can also use MACROS from /etc/pve-firewall/macros
+#
+
+# WWW.iutbeziers.fr
+WWW='194.199.227.125'
+BRIDGED_VM_ALLOW_HTTP $WWW
+BRIDGED_VM_ALLOW_HTTPS $WWW
+
+# webmail.iutbeziers.fr
+WEBMAIL='194.199.227.126'
+BRIDGED_VM_ALLOW_HTTP $WEBMAIL
+BRIDGED_VM_ALLOW_HTTPS $WEBMAIL

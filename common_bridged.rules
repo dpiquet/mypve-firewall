@@ -1,0 +1,10 @@
+##############################################
+#
+#	COMMON BRIDGED VM RULES
+#
+##############################################
+
+COMMON_BRIDGED_VM_PROTECTED_SSH
+COMMON_BRIDGED_VM_PROTECTED_SNMP
+COMMON_BRIDGED_VM_PROTECTED_PING
+COMMON_BRIDGED_VM_LIMIT_PING 30
