@@ -100,11 +100,11 @@ if [ ! -r $CONF_DIR/$HYPERVISOR_CONF_FILENAME ]; then
 fi
 
 # Load user defined macros
-#if [ -r $CONF_DIR/$MACROS_FILENAME ]; then
-#	source $CONF_DIR/$MACROS_FILENAME
-#else
-#	ERR_MSG "WARNING: Cannot find $CONF_DIR/$MACROS_FILENAME !"
-#fi
+if [ -r $CONF_DIR/$MACROS_FILENAME ]; then
+	source $CONF_DIR/$MACROS_FILENAME
+else
+	ERR_MSG "WARNING: Cannot find $CONF_DIR/$MACROS_FILENAME !"
+fi
 
 # Apply user defined bridged vm rules
 function APPLY_BRIDGED_VM_RULES {
@@ -189,6 +189,9 @@ function APPLY_VM_COMMON_RULES {
 	# Immediatly accept opened sessions
 	$IPTABLES --table filter --append FORWARD -m conntrack --ctstate RELATED,ESTABLISHED --jump ACCEPT
 
+	# Allow initiating out traffic
+	$IPTABLES --table filter --append FORWARD -m physdev --physdev-in veth+ --jump ACCEPT
+
 	######################################
 	#	DROP STRANGE PACKETS
 	######################################
@@ -216,7 +219,7 @@ function APPLY_VM_COMMON_RULES {
 	fi
 
 	# New connections (TCP, UDP, ICMP, ...) go to COMMON_VM_CHAIN
-	$IPTABLES --table filter --append FORWARD -m conntrack --ctstate NEW --jump $COMMON_VM_CHAIN
+	$IPTABLES --table filter --append FORWARD -m conntrack --ctstate NEW --jump $VM_CHAIN
 
 	# Call common bridged vm rules
 	source $CONF_DIR/$COMMON_BRIDGED_CONF_FILENAME
@@ -539,8 +542,8 @@ function DO_START {
 	RESET_FW
 	INIT_FW
 	APPLY_HYPERVISOR_RULES
-	APPLY_VM_COMMON_RULES
 	APPLY_BRIDGED_VM_RULES
+	APPLY_VM_COMMON_RULES
 	MODE_DROP
 }
 
