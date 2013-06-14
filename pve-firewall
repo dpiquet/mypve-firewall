@@ -497,9 +497,9 @@ function INIT_FW {
 		echo 'net.bridge.bridge-nf-call-arptables = 0' >> $SYSCTL_PVE_CONF_FILE
 		echo 'net.bridge.bridge-nf-filter-vlan-tagged = 0' >> $SYSCTL_PVE_CONF_FILE
 
-		# Reload sysctl values
+		# silently reload sysctl values
 		sysctl -p;
-		/etc/init.d/procps restart
+		/etc/init.d/procps restart &> /dev/null
 	else
 		ERR_MSG "FATAL: Cannot find $SYSCTL_PVE_CONF_FILE file !"
 		exit 1;
