@@ -4,20 +4,30 @@
 #
 #####################################################
 #
+# Define Here rules for your bridged virtual machines
+#
 # Available rules:
-# - BRIDGED_VM_ALLOW_TCP_PORT address port
-# - BRIDGED_VM_ALLOW_UDP_PORT address port
-# - BRIDGED_VM_ALLOW_PORT address
+#
+#    - BRIDGED_VM_LIMIT_PING <address> <pings per second>
+#    - BRIDGED_VM_ALLOW_PING <address>
+#    - BRIDGED_VM_PROTECTED_TCP_PORT <address> <port>
+#    - BRIDGED_VM_PROTECTED_UDP_PORT <address> <port>
+#    - BRIDGED_VM_PROTECTED_PORT <address> <port>
+#    - BRIDGED_VM_ALLOW_TCP_PORT <address> <port>
+#    - BRIDGED_VM_ALLOW_UDP_PORT <address> <port>
+#    - BRIDGED_VM_ALLOW_PORT <address> <port>
 #
 # You can also use MACROS from /etc/pve-firewall/macros
 #
 
-# WWW.iutbeziers.fr
-WWW='194.199.227.125'
+# example www virtual machine
+WWW='192.168.1.10'
 BRIDGED_VM_ALLOW_HTTP $WWW
 BRIDGED_VM_ALLOW_HTTPS $WWW
 
-# webmail.iutbeziers.fr
-WEBMAIL='194.199.227.126'
-BRIDGED_VM_ALLOW_HTTP $WEBMAIL
-BRIDGED_VM_ALLOW_HTTPS $WEBMAIL
+# example DNS virtual machine
+DNS1='192.168.1.11'
+BRIDGED_VM_ALLOW_UDP_PORT 53 $DNS1
+BRIDGED_VM_ALLOW_TCP_PORT 53 $DNS1
+
+

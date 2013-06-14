@@ -1,8 +1,13 @@
 ##########################################################
 #
-#	DEFINE HERE YOUR OWN MACROS
+#	DEFINE HERE YOUR OWN FUNCTIONS
 #
 ##########################################################
+#
+# This file can be used to define user functions.
+# It is sourced by the bash script, so write it carefully,
+# and protect it !
+#
 #
 # The following functions are available for defining macros:
 #
@@ -19,6 +24,7 @@
 # - HYPERVISOR_ALLOW_TCP_PORT port
 # - HYPERVISOR_ALLOW_UDP_PORT port
 # - HYPERVISOR_ALLOW_PORT port
+#
 
 #######################################
 # BRIDGED Virtual Machines Macros

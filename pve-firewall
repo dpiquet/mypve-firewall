@@ -108,12 +108,10 @@ fi
 
 # Apply user defined bridged vm rules
 function APPLY_BRIDGED_VM_RULES {
-	
 	source $CONF_DIR/$BRIDGED_CONF_FILENAME
 }
 
 function APPLY_ROUTED_VM_RULES {
-
 	source $CONF_DIR/$ROUTED_CONF_FILENAME
 }
 
@@ -125,7 +123,8 @@ function APPLY_HYPERVISOR_RULES {
 	#####################################
 
 	# accept immediatly open sessions
-	$IPTABLES --table filter --append INPUT -m conntrack --ctstate RELATED,ESTABLISHED --jump ACCEPT
+	$IPTABLES --table filter --append INPUT -m conntrack \
+	  --ctstate RELATED,ESTABLISHED --jump ACCEPT
 
 	############################################
 	#	LOG AND DROP STRANGE TCP PACKETS
@@ -133,24 +132,29 @@ function APPLY_HYPERVISOR_RULES {
 
 	# DROP XMAS Scan
 	if [ $HYPERVISOR_BLOCK_XMAS_SCAN -eq 1 ]; then
-		$IPTABLES --table filter --append INPUT --protocol tcp --tcp-flags FIN,URG,PSH FIN,URG,PSH --jump $LOGDROP_CHAIN
-		$IPTABLES --table filter --append INPUT --protocol tcp --tcp-flags ALL ALL --jump $LOGDROP_CHAIN;
+		$IPTABLES --table filter --append INPUT --protocol tcp \
+		  --tcp-flags FIN,URG,PSH FIN,URG,PSH --jump $LOGDROP_CHAIN
+		$IPTABLES --table filter --append INPUT --protocol tcp \
+		  --tcp-flags ALL ALL --jump $LOGDROP_CHAIN;
 	fi
 
 	# DROP NULL Scan
 	if [ $HYPERVISOR_BLOCK_NULL_SCAN -eq 1 ]; then
-		$IPTABLES --table filter --append INPUT --protocol tcp --tcp-flags ALL NONE --jump $LOGDROP_CHAIN;
+		$IPTABLES --table filter --append INPUT --protocol tcp \
+		  --tcp-flags ALL NONE --jump $LOGDROP_CHAIN;
 	fi
 
 	# DROP FIN Scan
 	if [ $HYPERVISOR_BLOCK_FIN_SCAN -eq 1 ]; then
-		$IPTABLES --table filter --append INPUT --protocol tcp --tcp-flags ALL FIN --jump $LOGDROP_CHAIN;
+		$IPTABLES --table filter --append INPUT --protocol tcp \
+		  --tcp-flags ALL FIN --jump $LOGDROP_CHAIN;
 	fi
 
 	# STRICT_SYN
 	# DROP if SYN is not set, NEXT RULES WORK ON NEW CONNECTIONS ONLY !!!
 	if [ $HYPERVISOR_STRICT_SYN -eq 1 ]; then
-		$IPTABLES --table filter --append INPUT --protocol tcp ! --tcp-flags ALL SYN --jump $LOGDROP_CHAIN;
+		$IPTABLES --table filter --append INPUT --protocol tcp \
+		  ! --tcp-flags ALL SYN --jump $LOGDROP_CHAIN;
 	fi
 
 	#########################################
@@ -158,17 +162,19 @@ function APPLY_HYPERVISOR_RULES {
 	#########################################
 
 	# Filter new connections (TCP, UDP, ICMP, ...)
-	$IPTABLES --table filter --append INPUT -m conntrack --ctstate NEW --jump $PROXMOX_CHAIN
+	$IPTABLES --table filter --append INPUT -m conntrack \
+	  --ctstate NEW --jump $PROXMOX_CHAIN
 
 	# PEER Proxmox rules
 	for PROXMOX_PEER in $PROXMOX_PEERS
 	do
 		# SSH
-		$IPTABLES --table filter --append $PROXMOX_CHAIN --source $PROXMOX_PEER --protocol tcp --dport 22 --jump ACCEPT;
+		$IPTABLES --table filter --append $PROXMOX_CHAIN \
+		  --source $PROXMOX_PEER --protocol tcp --dport 22 --jump ACCEPT;
 
-		# Corosync
+		# Corosync ?
 
-		# etc...
+		# etc... ?
 	done
 
 	# ALLOW ALL FOR LOOPBACK INTERFACE
@@ -187,10 +193,12 @@ function APPLY_VM_COMMON_RULES {
 	##############################################
 
 	# Immediatly accept opened sessions
-	$IPTABLES --table filter --append FORWARD -m conntrack --ctstate RELATED,ESTABLISHED --jump ACCEPT
+	$IPTABLES --table filter --append FORWARD -m conntrack \
+	  --ctstate RELATED,ESTABLISHED --jump ACCEPT
 
 	# Allow initiating out traffic
-	$IPTABLES --table filter --append FORWARD -m physdev --physdev-in veth+ --jump ACCEPT
+	$IPTABLES --table filter --append FORWARD -m physdev \
+	  --physdev-in veth+ --jump ACCEPT
 
 	######################################
 	#	DROP STRANGE PACKETS
@@ -198,24 +206,29 @@ function APPLY_VM_COMMON_RULES {
 
 	# DROP XMAS Scan
 	if [ "$BRIDGED_VM_BLOCK_XMAS_SCAN" -eq "1" ]; then
-		$IPTABLES --table filter --append FORWARD --protocol tcp --tcp-flags FIN,URG,PSH FIN,URG,PSH --jump $LOGDROP_CHAIN
-		$IPTABLES --table filter --append FORWARD --protocol tcp --tcp-flags ALL ALL --jump $LOGDROP_CHAIN;
+		$IPTABLES --table filter --append FORWARD --protocol tcp \
+		  --tcp-flags FIN,URG,PSH FIN,URG,PSH --jump $LOGDROP_CHAIN
+		$IPTABLES --table filter --append FORWARD --protocol tcp \
+		  --tcp-flags ALL ALL --jump $LOGDROP_CHAIN;
 	fi
 
 	# DROP NULL Scan
 	if [ "$BRIDGED_VM_BLOCK_NULL_SCAN" -eq "1" ]; then
-		$IPTABLES --table filter --append FORWARD --protocol tcp --tcp-flags ALL NONE --jump $LOGDROP_CHAIN;
+		$IPTABLES --table filter --append FORWARD --protocol tcp \
+		  --tcp-flags ALL NONE --jump $LOGDROP_CHAIN;
 	fi
 
 	# DROP FIN Scan
 	if [ "$BRIDGED_VM_BLOCK_FIN_SCAN" -eq "1" ]; then
-		$IPTABLES --table filter --append FORWARD --protocol tcp --tcp-flags ALL FIN --jump $LOGDROP_CHAIN
+		$IPTABLES --table filter --append FORWARD --protocol tcp \
+		  --tcp-flags ALL FIN --jump $LOGDROP_CHAIN
 	fi
 
 	# STRICT SYN
 	# DROP if SYN is not set, NEXT RULES WORK ON NEW CONNECTIONS ONLY !!!
 	if [ "$BRIDGED_VM_STRICT_SYN" -eq "1" ]; then
-		$IPTABLES --table filter --append FORWARD --protocol tcp ! --tcp-flags ALL SYN --jump $LOGDROP_CHAIN
+		$IPTABLES --table filter --append FORWARD --protocol tcp \
+		  ! --tcp-flags ALL SYN --jump $LOGDROP_CHAIN
 	fi
 
 	# New connections (TCP, UDP, ICMP, ...) go to COMMON_VM_CHAIN
@@ -246,8 +259,10 @@ function ROUTED_VM_ALLOW_UDP_PORT {
 }
 
 function ROUTED_VM_ALLOW_PORT {
-	$IPTABLES --table nat --append PREROUTING --dport $2 --destination $PROXMOX_ADDR --jump DNAT --to-destination $1
-	$IPTABLES --table nat --append POSTROUTING --sport $2 --source $1 --jump SNAT --to-source $PROXMOX_ADDR
+	$IPTABLES --table nat --append PREROUTING --dport $2 \
+	  --destination $PROXMOX_ADDR --jump DNAT --to-destination $1
+	$IPTABLES --table nat --append POSTROUTING --sport $2 \
+	  --source $1 --jump SNAT --to-source $PROXMOX_ADDR
 }
 
 function ROUTED_VM_PROTECTED_TCP_PORT {

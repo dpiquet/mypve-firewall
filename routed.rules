@@ -3,3 +3,14 @@
 #	Routed VM rules
 #
 #######################################
+#
+# Define here your rules for routed virtual machines
+#
+#  Available rules:
+#    - ROUTED_VM_PROTECTED_TCP_PORT <port> <address>
+#    - ROUTED_VM_PROTECTED_UDP_PORT <port> <address>
+#    - ROUTED_VM_PROTECTED_PORT <port> <address>
+#    - ROUTED_VM_ALLOW_TCP_PORT <port> <address>
+#    - ROUTED_VM_ALLOW_UDP_PORT <port> <address>
+#    - ROUTED_VM_ALLOW_PORT <port> <address>
+#

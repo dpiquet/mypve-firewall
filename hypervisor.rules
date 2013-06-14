@@ -3,6 +3,19 @@
 #	HYPERVISOR RULES
 #
 ######################################
+#
+# Define here your rules for the hypervisor itself
+#
+#  Available rules:
+#    - HYPERVISOR_LIMIT_PING <PINGS PER SECONDS>
+#    - HYPERVISOR_ALLOW_PING
+#    - HYPERVISOR_PROTECTED_TCP_PORT <port>
+#    - HYPERVISOR_PROTECTED_UDP_PORT <port>
+#    - HYPERVISOR_PROTECTED_PORT <port>
+#    - HYPERVISOR_ALLOW_TCP_PORT <port>
+#    - HYPERVISOR_ALLOW_UDP_PORT <port>
+#    - HYPERVISOR_ALLOW_PORT <port>
+#
 
 HYPERVISOR_LIMIT_PING 30
 HYPERVISOR_PROTECTED_SNMP

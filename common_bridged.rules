@@ -3,6 +3,21 @@
 #	COMMON BRIDGED VM RULES
 #
 ##############################################
+#
+# Thoses rules will be applied to all bridged VM
+#
+# Available Rules:
+#    - COMMON_BRIDGED_VM_ALLOW_PING
+#    - COMMON_BRIDGED_VM_LIMIT_PING <pings per second>
+#    - COMMON_BRIDGED_VM_PROTECTED_TCP_PORT <port>
+#    - COMMON_BRIDGED_VM_PROTECTED_UDP_PORT <port>
+#    - COMMON_BRIDGED_VM_PROTECTED_PORT <port>
+#    - COMMON_BRIDGED_VM_ALLOW_TCP_PORT <port>
+#    - COMMON_BRIDGED_VM_ALLOW_UDP_PORT <port>
+#    - COMMON_BRIDGED_VM_ALLOW_PORT <port>
+#
+#
+#
 
 COMMON_BRIDGED_VM_PROTECTED_SSH
 COMMON_BRIDGED_VM_PROTECTED_SNMP
