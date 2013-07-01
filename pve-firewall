@@ -42,7 +42,7 @@ function ERR_MSG () {
 }
 
 function is_ipv6() {
-    echo $1 | grep '[a-f0-9]' > /dev/null
+    echo $1 | grep -E '([a-f0-9]{1,4}:)+' > /dev/null
     return $?
         
 }
