@@ -196,7 +196,7 @@ function APPLY_HYPERVISOR_RULES {
     for PROXMOX_PEER in $PROXMOX_PEERS
     do
         is_ipv6 $PROXMOX_PEER
-        if [ $? -ne 0 ]; then
+        if [ $? -ne "0" ]; then
 	    # SSH
 	    $IPTABLES --table filter --append $PROXMOX_CHAIN \
 	      --source $PROXMOX_PEER --protocol tcp --dport 22 --jump ACCEPT;
@@ -292,17 +292,17 @@ function APPLY_VM_COMMON_RULES {
 
 function ROUTED_VM_MASQUERADE {
     is_ipv6 $1
-    if [ $? -eq 0 ]; then return; fi
+    if [ $? -eq "0" ]; then return; fi
 
     $IPTABLES --table nat --append POSTROUTING --source $1 --jump MASQUERADE
 }
 
 function ROUTED_VM_ALLOW_TCP_PORT {
     is_ipv6 $1
-    if [ $? -eq 0 ]; then return; fi
+    if [ $? -eq "0" ]; then return; fi
 
     is_ipv6 $2
-    if [$? -eq 0]; then return; fi
+    if [ $? -eq "0" ]; then return; fi
 
     $IPTABLES --table nat --append PREROUTING --protocol tcp --dport $2 \
       --destination $PROXMOX_ADDR --jump DNAT --to-destination $1
@@ -313,10 +313,10 @@ function ROUTED_VM_ALLOW_TCP_PORT {
 
 function ROUTED_VM_ALLOW_UDP_PORT {
     is_ipv6 $1
-    if [ $? -eq 0]; then return; fi
+    if [ $? -eq "0" ]; then return; fi
 
     is_ipv6 $2
-    if [$? -eq 0]; then return; fi
+    if [ $? -eq "0" ]; then return; fi
 
     $IPTABLES --table nat --append PREROUTING --protocol udp --dport $2 \
       --destination $PROXMOX_ADDR --jump DNAT --to-destination $1
@@ -327,10 +327,10 @@ function ROUTED_VM_ALLOW_UDP_PORT {
 
 function ROUTED_VM_ALLOW_PORT {
     is_ipv6 $1
-    if [ $? -eq 0]; then return; fi
+    if [ $? -eq "0" ]; then return; fi
 
     is_ipv6 $2
-    if [$? -eq 0]; then return; fi
+    if [ $? -eq "0" ]; then return; fi
 
     $IPTABLES --table nat --append PREROUTING --dport $2 \
       --destination $PROXMOX_ADDR --jump DNAT --to-destination $1
@@ -340,15 +340,15 @@ function ROUTED_VM_ALLOW_PORT {
 
 function ROUTED_VM_PROTECTED_TCP_PORT {
     is_ipv6 $1
-    if [$? -eq 0]; then return; fi
+    if [ $? -eq "0" ]; then return; fi
 
     is_ipv6 $2
-    if [$? -eq 0]; then return; fi
+    if [ $? -eq "0" ]; then return; fi
 
     for TRUSTNET in $TRUSTNETS
     do
         is_ipv6 $TRUSTNET
-        if [$? -eq 0]; then continue; fi
+        if [ $? -eq "0" ]; then continue; fi
 
 	$IPTABLES --table nat --append PREROUTING --source $TRUSTNET --protocol tcp \
 	  --dport $2 --destination $PROXMOX_ADDR --jump DNAT --to-destination $1
@@ -360,15 +360,15 @@ function ROUTED_VM_PROTECTED_TCP_PORT {
 
 function ROUTED_VM_PROTECTED_UDP_PORT {
     is_ipv6 $1
-    if [$? -eq 0]; then return; fi
+    if [ $? -eq "0" ]; then return; fi
 
     is_ipv6 $2
-    if [$? -eq 0]; then return; fi
+    if [ $? -eq "0" ]; then return; fi
 
     for TRUSTNET in $TRUSTNETS
     do
         is_ipv6 $TRUSTNET
-        if [$? -eq 0]; then continue; fi
+        if [ $? -eq "0" ]; then continue; fi
 
 	$IPTABLES --table nat --append PREROUTING --source $TRUSTNET \
 	  --protocol udp --dport 80 --destination $PROXMOX_ADDR --jump DNAT --to-destination $1
@@ -380,10 +380,10 @@ function ROUTED_VM_PROTECTED_UDP_PORT {
 
 function ROUTED_VM_PROTECTED_PORT {
     is_ipv6 $1
-    if [$? -eq 0]; then return; fi
+    if [ $? -eq "0" ]; then return; fi
 
     is_ipv6 $2
-    if [$? -eq 0]; then return; fi
+    if [ $? -eq "0" ]; then return; fi
 
     $IPTABLES --table nat --append PREROUTING --source $TRUSTNET --dport $2 \
       --destination $PROXMOX_ADDR --jump DNAT --to-destination $1
@@ -427,7 +427,7 @@ function HYPERVISOR_PROTECTED_PING {
     for TRUSTNET in $TRUSTNETS
     do
         is_ipv6 $TRUSTNET
-        if [$? -eq 0]; then
+        if [ $? -eq "0" ]; then
 	    $IP6TABLES --table filter --insert INPUT 1 --source $TRUSTNET \
 	      --protocol icmp --icmp-type echo-reply --jump ACCEPT;
         else
@@ -441,7 +441,7 @@ function HYPERVISOR_PROTECTED_LIMIT_PING {
     for TRUSTNET in $TRUSTNETS
     do
         is_ipv6 $TRUSTNET
-        if [$? -eq 0]; then
+        if [ $? -eq "0" ]; then
 	    $IP6TABLES --table filter --insert INPUT 1 --source $TRUSTNET \
 	      --protocol icmp --icmp-type echo-reply -m limit --limit $1/m --jump ACCEPT;
         else
@@ -455,7 +455,7 @@ function HYPERVISOR_PROTECTED_TCP_PORT {
     for TRUSTNET in $TRUSTNETS
     do
         is_ipv6 $TRUSTNET
-        if [$? -eq 0]; then
+        if [ $? -eq "0" ]; then
 	    $IPTABLES --table filter --append $PROXMOX_CHAIN --source $TRUSTNET \
 	      --protocol tcp --dport $1 --jump ACCEPT;
         else
@@ -469,7 +469,7 @@ function HYPERVISOR_PROTECTED_UDP_PORT {
     for TRUSTNET in $TRUSTNETS
     do
         is_ipv6 $TRUSTNET
-        if [$? -eq 0]; then
+        if [ $? -eq "0" ]; then
 	    $IPTABLES --table filter --append $PROXMOX_CHAIN --source $TRUSTNET \
 	      --protocol udp --dport $1 --jump ACCEPT;
         else
@@ -483,7 +483,7 @@ function HYPERVISOR_PROTECTED_PORT {
     for TRUSTNET in $TRUSTNETS
     do
         is_ipv6 $TRUSTNET
-        if [$? -eq 0]; then
+        if [ $? -eq "0" ]; then
 	    $IP6TABLES --table filter --append $PROXMOX_CHAIN --source $TRUSTNET \
 	      --protocol tcp --dport $1 --jump ACCEPT
 	    $IP6TABLES --table filter --append $PROXMOX_CHAIN --source $TRUSTNET \
@@ -499,7 +499,7 @@ function HYPERVISOR_PROTECTED_PORT {
 
 function BRIDGED_VM_ALLOW_PING {
     is_ipv6 $1
-    if [$? -eq 0]; then
+    if [ $? -eq "0" ]; then
         $IP6TABLES --table filter --insert FORWARD 1 --destination $1 --protocol icmp \
           --icmp-type echo-request --jump ACCEPT;
     else
@@ -510,7 +510,7 @@ function BRIDGED_VM_ALLOW_PING {
 
 function BRIDGED_VM_LIMIT_PING {
     is_ipv6 $1
-    if [$? -eq 0]; then
+    if [ $? -eq "0" ]; then
         $IP6TABLES --table filter --insert FORWARD 1 --destination $1 --protocol icmp \
           --icmp-type echo-request -m limit --limit $2/m --jump ACCEPT;
     else
@@ -521,7 +521,7 @@ function BRIDGED_VM_LIMIT_PING {
 
 function BRIDGED_VM_ALLOW_TCP_PORT {
     is_ipv6 $1
-    if [$? -eq 0]; then
+    if [ $? -eq "0" ]; then
 	$IP6TABLES --table filter --insert $VM_CHAIN 1 --destination $1 --protocol tcp \
 	  --dport $2 --jump ACCEPT;
     else
@@ -532,7 +532,7 @@ function BRIDGED_VM_ALLOW_TCP_PORT {
 
 function BRIDGED_VM_ALLOW_UDP_PORT {
     is_ipv6 $1
-    if [$? -eq 0]; then
+    if [ $? -eq "0" ]; then
 	$IP6TABLES --table filter --insert $VM_CHAIN 1 --destination $1 --protocol udp \
 	  --dport $2 --jump ACCEPT;
     else
@@ -543,7 +543,7 @@ function BRIDGED_VM_ALLOW_UDP_PORT {
 
 function BRIDGED_VM_ALLOW_PORT {
     is_ipv6 $1
-    if [$? -eq 0]; then
+    if [ $? -eq "0" ]; then
 	$IP6TABLES --table filter --insert $VM_CHAIN 1 --destination $1 --dport $2 --jump ACCEPT;
     else
 	$IPTABLES --table filter --insert $VM_CHAIN 1 --destination $1 --dport $2 --jump ACCEPT;
@@ -552,11 +552,11 @@ function BRIDGED_VM_ALLOW_PORT {
 
 function BRIDGED_VM_PROTECTED_PING {
     is_ipv6 $1
-    if [$? -eq 0]; then
+    if [ $? -eq "0" ]; then
         for TRUSTNET in $TRUSTNETS
         do
             is_ipv6 $TRUSTNET
-            if [$? -ne 0]; then continue; fi
+            if [ $? -ne "0" ]; then continue; fi
 
 	    $IP6TABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
 	      --destination $1 --protocol icmp --icmp-type echo-request --jump ACCEPT
@@ -565,7 +565,7 @@ function BRIDGED_VM_PROTECTED_PING {
         for TRUSTNET in $TRUSTNETS
         do
             is_ipv6 $TRUSTNET
-            if [$? -eq 0]; then continue; fi
+            if [ $? -eq "0" ]; then continue; fi
 
 	    $IPTABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
 	      --destination $1 --protocol icmp --icmp-type echo-request --jump ACCEPT
@@ -575,11 +575,11 @@ function BRIDGED_VM_PROTECTED_PING {
 
 function BRIDGED_VM_PROTECTED_LIMIT_PING {
     is_ipv6 $1
-    if [$? -eq 0]; then
+    if [ $? -eq "0" ]; then
         for TRUSTNET in $TRUSTNETS
         do
             is_ipv6 $TRUSTNET
-            if [$? -ne 0]; then continue; fi
+            if [ $? -ne "0" ]; then continue; fi
 
    	    $IP6TABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
 	      --destination $1 --protocol icmp --icmp-type echo-request -m limit --limit $2/m --jump ACCEPT
@@ -588,7 +588,7 @@ function BRIDGED_VM_PROTECTED_LIMIT_PING {
         for TRUSTNET in $TRUSTNETS
         do
             is_ipv6 $TRUSTNET
-            if [$? -eq 0]; then continue; fi
+            if [ $? -eq "0" ]; then continue; fi
 
    	    $IPTABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
 	      --destination $1 --protocol icmp --icmp-type echo-request -m limit --limit $2/m --jump ACCEPT
@@ -598,11 +598,11 @@ function BRIDGED_VM_PROTECTED_LIMIT_PING {
 
 function BRIDGED_VM_PROTECTED_TCP_PORT {	
     is_ipv6 $1
-    if [$? -eq 0]; then
+    if [ $? -eq "0" ]; then
         for TRUSTNET in $TRUSTNETS
         do
             is_ipv6 $TRUSTNET
-            if [$? -ne 0]; then continue; fi
+            if [ $? -ne "0" ]; then continue; fi
 
    	    $IP6TABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
 	      --destination $1 --protocol tcp --dport $2 --jump ACCEPT
@@ -611,7 +611,7 @@ function BRIDGED_VM_PROTECTED_TCP_PORT {
         for TRUSTNET in $TRUSTNETS
         do
             is_ipv6 $TRUSTNET
-            if [$? -eq 0]; then continue; fi
+            if [ $? -eq "0" ]; then continue; fi
 
    	    $IPTABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
 	      --destination $1 --protocol tcp --dport $2 --jump ACCEPT
@@ -621,11 +621,11 @@ function BRIDGED_VM_PROTECTED_TCP_PORT {
 
 function BRIDGED_VM_PROTECTED_UDP_PORT {
     is_ipv6 $1
-    if [$? -eq 0]; then
+    if [ $? -eq "0" ]; then
         for TRUSTNET in $TRUSTNETS
         do
             is_ipv6 $TRUSTNET
-            if [$? -ne 0]; then continue; fi
+            if [ $? -ne "0" ]; then continue; fi
 
 	    $IP6TABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
 	      --destination $1 --protocol udp --dport $2 --jump ACCEPT
@@ -634,7 +634,7 @@ function BRIDGED_VM_PROTECTED_UDP_PORT {
         for TRUSTNET in $TRUSTNETS
         do
             is_ipv6 $TRUSTNET
-            if [$? -eq 0]; then continue; fi
+            if [ $? -eq "0" ]; then continue; fi
 
 	    $IPTABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
 	      --destination $1 --protocol udp --dport $2 --jump ACCEPT
@@ -644,11 +644,11 @@ function BRIDGED_VM_PROTECTED_UDP_PORT {
 
 function BRIDGED_VM_PROTECTED_PORT {
     is_ipv6 $1
-    if [$? -eq 0]; then
+    if [ $? -eq "0" ]; then
         for TRUSTNET in $TRUSTNETS
         do
             is_ipv6 $TRUSTNET
-            if [$? -ne 0]; then continue; fi
+            if [ $? -ne "0" ]; then continue; fi
 
 	    $IP6TABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
 	      --destination $1 --dport $2 --jump ACCEPT
@@ -657,7 +657,7 @@ function BRIDGED_VM_PROTECTED_PORT {
         for TRUSTNET in $TRUSTNETS
         do
             is_ipv6 $TRUSTNET
-            if [$? -ne 0]; then continue; fi
+            if [ $? -ne "0" ]; then continue; fi
 
 	    $IPTABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
 	      --destination $1 --dport $2 --jump ACCEPT
@@ -700,7 +700,7 @@ function COMMON_BRIDGED_VM_PROTECTED_PING {
     for TRUSTNET in $TRUSTNETS
     do
         is_ipv6 $TRUSTNET
-        if [$? -eq 0]; then
+        if [ $? -eq "0" ]; then
             $IP6TABLES --table filter --append $COMMON_VM_CHAIN --source $TRUSTNET \
               --protocol icmp --icmp-type echo-request --jump ACCEPT;
         else
@@ -714,7 +714,7 @@ function COMMON_BRIDGED_VM_PROTECTED_LIMIT_PING {
     for TRUSTNET in $TRUSTNETS
     do
         is_ipv6 $TRUSTNET
-        if [$? -eq 0]; then
+        if [ $? -eq "0" ]; then
             $IP6TABLES --table filter --append $COMMON_VM_CHAIN --source $TRUSTNET \
               --protocol icmp --icmp-type echo-request -m limit --limit $1/m --jump ACCEPT;
         else
@@ -728,7 +728,7 @@ function COMMON_BRIDGED_VM_PROTECTED_TCP_PORT {
     for TRUSTNET in $TRUSTNETS
     do
         is_ipv6 $TRUSTNET
-        if [$? -eq 0]; then
+        if [ $? -eq "0" ]; then
             $IP6TABLES --table filter --append $COMMON_VM_CHAIN --source $TRUSTNET \
               --protocol tcp --dport $1 --jump ACCEPT;
         else
@@ -742,7 +742,7 @@ function COMMON_BRIDGED_VM_PROTECTED_UDP_PORT {
     for TRUSTNET in $TRUSTNETS
     do
         is_ipv6 $TRUSTNET
-        if [$? -eq 0]; then
+        if [ $? -eq "0" ]; then
             $IP6TABLES --table filter --append $COMMON_VM_CHAIN --source $TRUSTNET \
               --protocol udp --dport $1 --jump ACCEPT;
         else
@@ -756,7 +756,7 @@ function COMMON_BRIDGED_VM_PROTECTED_PORT {
     for TRUSTNET in $TRUSTNETS
     do
         is_ipv6 $TRUSTNET
-        if [$? -eq 0]; then
+        if [ $? -eq "0" ]; then
             $IP6TABLES --table filter --append $COMMON_VM_CHAIN --source $TRUSTNET \
               --dport $1 --jump ACCEPT;
         else
