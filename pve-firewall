@@ -657,7 +657,7 @@ function BRIDGED_VM_PROTECTED_PORT {
         for TRUSTNET in $TRUSTNETS
         do
             is_ipv6 $TRUSTNET
-            if [ $? -ne "0" ]; then continue; fi
+            if [ $? -eq "0" ]; then continue; fi
 
 	    $IPTABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
 	      --destination $1 --dport $2 --jump ACCEPT
