@@ -397,7 +397,7 @@ function HYPERVISOR_ALLOW_PING {
       --icmp-type echo-request --jump ACCEPT
 
     $IP6TABLES --table filter --insert INPUT 1 --protocol icmpv6 \
-      --icmp-type echo-request --jump ACCEPT
+      --icmpv6-type echo-request --jump ACCEPT
 }
 
 function HYPERVISOR_LIMIT_PING {
@@ -405,7 +405,7 @@ function HYPERVISOR_LIMIT_PING {
       --icmp-type echo-request -m limit --limit $1/m --jump ACCEPT
 
     $IP6TABLES --table filter --insert INPUT 1 --protocol icmpv6 \
-      --icmp-type echo-request -m limit --limit $1/m --jump ACCEPT
+      --icmpv6-type echo-request -m limit --limit $1/m --jump ACCEPT
 }
 
 function HYPERVISOR_ALLOW_TCP_PORT {
@@ -432,7 +432,7 @@ function HYPERVISOR_PROTECTED_PING {
         is_ipv6 $TRUSTNET
         if [ $? -eq "0" ]; then
 	    $IP6TABLES --table filter --insert INPUT 1 --source $TRUSTNET \
-	      --protocol icmpv6 --icmp-type echo-reply --jump ACCEPT;
+	      --protocol icmpv6 --icmpv6-type echo-reply --jump ACCEPT;
         else
 	    $IPTABLES --table filter --insert INPUT 1 --source $TRUSTNET \
 	      --protocol icmp --icmp-type echo-reply --jump ACCEPT;
@@ -446,7 +446,7 @@ function HYPERVISOR_PROTECTED_LIMIT_PING {
         is_ipv6 $TRUSTNET
         if [ $? -eq "0" ]; then
 	    $IP6TABLES --table filter --insert INPUT 1 --source $TRUSTNET \
-	      --protocol icmpv6 --icmp-type echo-reply -m limit --limit $1/m --jump ACCEPT;
+	      --protocol icmpv6 --icmpv6-type echo-reply -m limit --limit $1/m --jump ACCEPT;
         else
 	    $IPTABLES --table filter --insert INPUT 1 --source $TRUSTNET \
 	      --protocol icmp --icmp-type echo-reply -m limit --limit $1/m --jump ACCEPT;
@@ -504,7 +504,7 @@ function BRIDGED_VM_ALLOW_PING {
     is_ipv6 $1
     if [ $? -eq "0" ]; then
         $IP6TABLES --table filter --insert FORWARD 1 --destination $1 --protocol icmpv6 \
-          --icmp-type echo-request --jump ACCEPT;
+          --icmpv6-type echo-request --jump ACCEPT;
     else
         $IPTABLES --table filter --insert FORWARD 1 --destination $1 --protocol icmp \
           --icmp-type echo-request --jump ACCEPT;
@@ -515,7 +515,7 @@ function BRIDGED_VM_LIMIT_PING {
     is_ipv6 $1
     if [ $? -eq "0" ]; then
         $IP6TABLES --table filter --insert FORWARD 1 --destination $1 --protocol icmpv6 \
-          --icmp-type echo-request -m limit --limit $2/m --jump ACCEPT;
+          --icmpv6-type echo-request -m limit --limit $2/m --jump ACCEPT;
     else
         $IPTABLES --table filter --insert FORWARD 1 --destination $1 --protocol icmp \
           --icmp-type echo-request -m limit --limit $2/m --jump ACCEPT;
@@ -562,7 +562,7 @@ function BRIDGED_VM_PROTECTED_PING {
             if [ $? -ne "0" ]; then continue; fi
 
 	    $IP6TABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
-	      --destination $1 --protocol icmpv6 --icmp-type echo-request --jump ACCEPT
+	      --destination $1 --protocol icmpv6 --icmpv6-type echo-request --jump ACCEPT
         done;
     else
         for TRUSTNET in $TRUSTNETS
@@ -585,7 +585,7 @@ function BRIDGED_VM_PROTECTED_LIMIT_PING {
             if [ $? -ne "0" ]; then continue; fi
 
    	    $IP6TABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
-	      --destination $1 --protocol icmpv6 --icmp-type echo-request -m limit --limit $2/m --jump ACCEPT
+	      --destination $1 --protocol icmpv6 --icmpv6-type echo-request -m limit --limit $2/m --jump ACCEPT
         done;
     else
         for TRUSTNET in $TRUSTNETS
@@ -673,7 +673,7 @@ function COMMON_BRIDGED_VM_ALLOW_PING {
       --icmp-type echo-request --jump ACCEPT
 
     $IP6TABLES --table filter --insert $COMMON_VM_CHAIN 1 --protocol icmpv6 \
-      --icmp-type echo-request --jump ACCEPT
+      --icmpv6-type echo-request --jump ACCEPT
 }
 
 function COMMON_BRIDGED_VM_LIMIT_PING {
@@ -681,7 +681,7 @@ function COMMON_BRIDGED_VM_LIMIT_PING {
       --icmp-type echo-request -m limit --limit $1/m --jump ACCEPT
 
     $IP6TABLES --table filter --append $COMMON_VM_CHAIN --protocol icmpv6 \
-      --icmp-type echo-request -m limit --limit $1/m --jump ACCEPT
+      --icmpv6-type echo-request -m limit --limit $1/m --jump ACCEPT
 }
 
 function COMMON_BRIDGED_VM_ALLOW_TCP_PORT {
@@ -705,7 +705,7 @@ function COMMON_BRIDGED_VM_PROTECTED_PING {
         is_ipv6 $TRUSTNET
         if [ $? -eq "0" ]; then
             $IP6TABLES --table filter --append $COMMON_VM_CHAIN --source $TRUSTNET \
-              --protocol icmpv6 --icmp-type echo-request --jump ACCEPT;
+              --protocol icmpv6 --icmpv6-type echo-request --jump ACCEPT;
         else
             $IPTABLES --table filter --append $COMMON_VM_CHAIN --source $TRUSTNET \
               --protocol icmp --icmp-type echo-request --jump ACCEPT;
@@ -719,7 +719,7 @@ function COMMON_BRIDGED_VM_PROTECTED_LIMIT_PING {
         is_ipv6 $TRUSTNET
         if [ $? -eq "0" ]; then
             $IP6TABLES --table filter --append $COMMON_VM_CHAIN --source $TRUSTNET \
-              --protocol icmpv6 --icmp-type echo-request -m limit --limit $1/m --jump ACCEPT;
+              --protocol icmpv6 --icmpv6-type echo-request -m limit --limit $1/m --jump ACCEPT;
         else
             $IPTABLES --table filter --append $COMMON_VM_CHAIN --source $TRUSTNET \
               --protocol icmp --icmp-type echo-request -m limit --limit $1/m --jump ACCEPT;
