@@ -828,7 +828,6 @@ function RESET_FW {
 
 	$IP6TABLES --table filter --flush
 	$IP6TABLES --table mangle --flush
-	$IP6TABLES --table nat --flush
 	$IP6TABLES --table raw --flush
 
 
