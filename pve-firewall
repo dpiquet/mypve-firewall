@@ -456,10 +456,10 @@ function HYPERVISOR_PROTECTED_TCP_PORT {
     do
         is_ipv6 $TRUSTNET
         if [ $? -eq "0" ]; then
-	    $IPTABLES --table filter --append $PROXMOX_CHAIN --source $TRUSTNET \
+	    $IP6TABLES --table filter --append $PROXMOX_CHAIN --source $TRUSTNET \
 	      --protocol tcp --dport $1 --jump ACCEPT;
         else
-	    $IP6TABLES --table filter --append $PROXMOX_CHAIN --source $TRUSTNET \
+	    $IPTABLES --table filter --append $PROXMOX_CHAIN --source $TRUSTNET \
 	      --protocol tcp --dport $1 --jump ACCEPT;
         fi
     done
@@ -470,7 +470,7 @@ function HYPERVISOR_PROTECTED_UDP_PORT {
     do
         is_ipv6 $TRUSTNET
         if [ $? -eq "0" ]; then
-	    $IPTABLES --table filter --append $PROXMOX_CHAIN --source $TRUSTNET \
+	    $IP6TABLES --table filter --append $PROXMOX_CHAIN --source $TRUSTNET \
 	      --protocol udp --dport $1 --jump ACCEPT;
         else
 	    $IPTABLES --table filter --append $PROXMOX_CHAIN --source $TRUSTNET \
