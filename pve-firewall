@@ -846,7 +846,10 @@ function MODE_DROP {
 	$IPTABLES --table filter --policy FORWARD DROP
 
 	$IP6TABLES --table filter --policy INPUT DROP
-	$IP6TABLES --table filter --policy FORWARD DROP
+
+        # policy drop is buggy, add a drop rule instead
+	#$IP6TABLES --table filter --policy FORWARD DROP 
+        $IP6TABLES --table filter --append FORWARD --jump DROP
 }
 
 # "ACCEPT" mode
