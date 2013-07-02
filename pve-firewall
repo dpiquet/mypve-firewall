@@ -189,8 +189,12 @@ function APPLY_HYPERVISOR_RULES {
     $IPTABLES --table filter --append INPUT -m conntrack \
       --ctstate NEW --jump $PROXMOX_CHAIN
 
-    $IP6TABLES --table filter --append INPUT -m conntrack \
-      --ctstate NEW --jump $PROXMOX_CHAIN
+# disable NEW ctstate
+#    $IP6TABLES --table filter --append INPUT -m conntrack \
+#      --ctstate NEW --jump $PROXMOX_CHAIN
+
+    $IP6TABLES --table filter --append INPUT --jump $PROXMOX_CHAIN
+
 
     # PEER Proxmox rules
     for PROXMOX_PEER in $PROXMOX_PEERS
