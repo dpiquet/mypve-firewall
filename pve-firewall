@@ -775,7 +775,7 @@ function INIT_FW {
 	# Enable IPTables for bridge
 	if [ -f $SYSCTL_PVE_CONF_FILE ]; then
 		# Change sysctl values
-		echo 'net.bridge.bridge-nf-call-ip6tables = 0' > $SYSCTL_PVE_CONF_FILE
+		echo 'net.bridge.bridge-nf-call-ip6tables = 1' > $SYSCTL_PVE_CONF_FILE
 		echo 'net.bridge.bridge-nf-call-iptables = 1' >> $SYSCTL_PVE_CONF_FILE
 		echo 'net.bridge.bridge-nf-call-arptables = 0' >> $SYSCTL_PVE_CONF_FILE
 		echo 'net.bridge.bridge-nf-filter-vlan-tagged = 0' >> $SYSCTL_PVE_CONF_FILE
