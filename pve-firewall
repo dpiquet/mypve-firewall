@@ -247,7 +247,7 @@ function APPLY_VM_COMMON_RULES {
     $IP6TABLES --table filter --append FORWARD -m physdev \
       --physdev-in veth+ --jump ACCEPT
 
-    $IP6TABLES --table filter --append FORWARF -p icmpv6 --jump ACCEPT
+    $IP6TABLES --table filter --append FORWARD -p icmpv6 --jump ACCEPT
 
     ######################################
     #	DROP STRANGE PACKETS
