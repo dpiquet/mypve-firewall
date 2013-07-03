@@ -137,6 +137,12 @@ function APPLY_HYPERVISOR_RULES {
       --ctstate RELATED,ESTABLISHED --jump ACCEPT
 
     ############################################
+    #   ACCEPT ICMPv6
+    ############################################
+
+    $IP6TABLES --table filter --append INPUT -p icmpv6 --jump ACCEPT
+
+    ############################################
     #	LOG AND DROP STRANGE TCP PACKETS
     ############################################
 
@@ -240,6 +246,8 @@ function APPLY_VM_COMMON_RULES {
 
     $IP6TABLES --table filter --append FORWARD -m physdev \
       --physdev-in veth+ --jump ACCEPT
+
+    $IP6TABLES --table filter --append FORWARF -p icmpv6 --jump ACCEPT
 
     ######################################
     #	DROP STRANGE PACKETS
@@ -847,10 +855,7 @@ function MODE_DROP {
     $IPTABLES --table filter --policy FORWARD DROP
 
     $IP6TABLES --table filter --policy INPUT DROP
-
-    # policy drop is buggy, add a drop rule instead
     $IP6TABLES --table filter --policy FORWARD DROP 
-    #$IP6TABLES --table filter --append FORWARD --jump DROP
 }
 
 # "ACCEPT" mode
