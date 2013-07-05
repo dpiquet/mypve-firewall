@@ -565,6 +565,37 @@ function BRIDGED_VM_ALLOW_PORT {
     fi
 }
 
+function BRIDGED_VM_REJECT_TCP_PORT {
+    is_ipv6 $1
+    if [$? -eq "0"]; then
+        $IP6TABLES --table filter --insert $VM_CHAIN 1 --destination $1 --protocol tcp \
+          --dport $2 --jump DROP;
+    else
+        $IPTABLES --table filter --insert $VM_CHAIN 1 --destination $1 --protocol tcp \
+          --dport $2 --jump DROP;
+    fi
+}
+
+function BRIDGED_VM_REJECT_UDP_PORT {
+    is_ipv6 $1
+    if [$? -eq "0"]; then
+        $IP6TABLES --table filter --insert $VM_CHAIN 1 --destination $1 --protocol udp \
+          --dport $2 --jump DROP;
+    else
+        $IPTABLES --table filter --insert $VM_CHAIN 1 --destination $1 --protocol tcp \
+          --dport $2 --jump DROP;
+    fi
+}
+
+function BRIDGED_VM_REJECT_PORT {
+    is_ipv6 $1
+    if [$? -eq "0"]; then
+        $IP6TABLES --table filter --insert $VM_CHAIN 1 --destination $1 --dport $2 --jump DROP;
+    else
+        $IPTABLES --table filter --insert $VM_CHAIN 1 --destination $1 --dport $2 --jump DROP;
+    fi
+}
+
 function BRIDGED_VM_PROTECTED_PING {
     is_ipv6 $1
     if [ $? -eq "0" ]; then
