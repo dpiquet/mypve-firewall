@@ -43,8 +43,7 @@ function ERR_MSG () {
 
 function is_ipv6() {
     echo $1 | grep -E '([a-f0-9]{1,4}:)+' > /dev/null
-    return $?
-        
+    return $?        
 }
 
 # LOAD GLOBAL CONFIGURATION
@@ -535,180 +534,219 @@ function BRIDGED_VM_LIMIT_PING {
 }
 
 function BRIDGED_VM_ALLOW_TCP_PORT {
-    is_ipv6 $1
-    if [ $? -eq "0" ]; then
-	$IP6TABLES --table filter --insert $VM_CHAIN 1 --destination $1 --protocol tcp \
-	  --dport $2 --jump ACCEPT;
-    else
-	$IPTABLES --table filter --insert $VM_CHAIN 1 --destination $1 --protocol tcp \
-	  --dport $2 --jump ACCEPT;
-    fi
+    for HOST in $1
+    do
+        is_ipv6 $HOST
+        if [ $? -eq "0" ]; then
+	    $IP6TABLES --table filter --insert $VM_CHAIN 1 --destination $HOST --protocol tcp \
+	      --dport $2 --jump ACCEPT;
+        else
+	    $IPTABLES --table filter --insert $VM_CHAIN 1 --destination $HOST --protocol tcp \
+	      --dport $2 --jump ACCEPT;
+        fi
+    done
 }
 
 function BRIDGED_VM_ALLOW_UDP_PORT {
-    is_ipv6 $1
-    if [ $? -eq "0" ]; then
-	$IP6TABLES --table filter --insert $VM_CHAIN 1 --destination $1 --protocol udp \
-	  --dport $2 --jump ACCEPT;
-    else
-	$IPTABLES --table filter --insert $VM_CHAIN 1 --destination $1 --protocol udp \
-	  --dport $2 --jump ACCEPT;
-    fi
+    for HOST in $1
+    do
+        is_ipv6 $HOST
+        if [ $? -eq "0" ]; then
+	    $IP6TABLES --table filter --insert $VM_CHAIN 1 --destination $HOST --protocol udp \
+	      --dport $2 --jump ACCEPT;
+        else
+	    $IPTABLES --table filter --insert $VM_CHAIN 1 --destination $HOST --protocol udp \
+	      --dport $2 --jump ACCEPT;
+        fi
+    done
 }
 
 function BRIDGED_VM_ALLOW_PORT {
-    is_ipv6 $1
-    if [ $? -eq "0" ]; then
-	$IP6TABLES --table filter --insert $VM_CHAIN 1 --destination $1 --dport $2 --jump ACCEPT;
-    else
-	$IPTABLES --table filter --insert $VM_CHAIN 1 --destination $1 --dport $2 --jump ACCEPT;
-    fi
+    for HOST in $1
+    do
+        is_ipv6 $HOST
+        if [ $? -eq "0" ]; then
+	    $IP6TABLES --table filter --insert $VM_CHAIN 1 --destination $HOST \
+              --dport $2 --jump ACCEPT;
+        else
+	    $IPTABLES --table filter --insert $VM_CHAIN 1 --destination $HOST \
+              --dport $2 --jump ACCEPT;
+        fi
+    done
 }
 
 function BRIDGED_VM_REJECT_TCP_PORT {
-    is_ipv6 $1
-    if [$? -eq "0"]; then
-        $IP6TABLES --table filter --insert $VM_CHAIN 1 --destination $1 --protocol tcp \
-          --dport $2 --jump DROP;
-    else
-        $IPTABLES --table filter --insert $VM_CHAIN 1 --destination $1 --protocol tcp \
-          --dport $2 --jump DROP;
-    fi
+    for HOST in $1
+    do
+        is_ipv6 $HOST
+        if [$? -eq "0"]; then
+            $IP6TABLES --table filter --insert $VM_CHAIN 1 --destination $HOST --protocol tcp \
+              --dport $2 --jump DROP;
+        else
+            $IPTABLES --table filter --insert $VM_CHAIN 1 --destination $HOST --protocol tcp \
+              --dport $2 --jump DROP;
+        fi
+    done
 }
 
 function BRIDGED_VM_REJECT_UDP_PORT {
-    is_ipv6 $1
-    if [$? -eq "0"]; then
-        $IP6TABLES --table filter --insert $VM_CHAIN 1 --destination $1 --protocol udp \
-          --dport $2 --jump DROP;
-    else
-        $IPTABLES --table filter --insert $VM_CHAIN 1 --destination $1 --protocol tcp \
-          --dport $2 --jump DROP;
-    fi
+    for HOST in $1
+    do
+        is_ipv6 $HOST
+        if [$? -eq "0"]; then
+            $IP6TABLES --table filter --insert $VM_CHAIN 1 --destination $HOST --protocol udp \
+              --dport $2 --jump DROP;
+        else
+            $IPTABLES --table filter --insert $VM_CHAIN 1 --destination $HOST --protocol tcp \
+              --dport $2 --jump DROP;
+        fi
+    done
 }
 
 function BRIDGED_VM_REJECT_PORT {
-    is_ipv6 $1
-    if [$? -eq "0"]; then
-        $IP6TABLES --table filter --insert $VM_CHAIN 1 --destination $1 --dport $2 --jump DROP;
-    else
-        $IPTABLES --table filter --insert $VM_CHAIN 1 --destination $1 --dport $2 --jump DROP;
-    fi
+    for HOST in $1
+    do
+        is_ipv6 $HOST
+        if [$? -eq "0"]; then
+            $IP6TABLES --table filter --insert $VM_CHAIN 1 --destination $HOST \
+              --dport $2 --jump DROP;
+        else
+            $IPTABLES --table filter --insert $VM_CHAIN 1 --destination $HOST \
+              --dport $2 --jump DROP;
+        fi
+    done
 }
 
 function BRIDGED_VM_PROTECTED_PING {
-    is_ipv6 $1
-    if [ $? -eq "0" ]; then
-        for TRUSTNET in $TRUSTNETS
-        do
-            is_ipv6 $TRUSTNET
-            if [ $? -ne "0" ]; then continue; fi
+    for HOST in $1
+    do
+        is_ipv6 $HOST
+        if [ $? -eq "0" ]; then
+            for TRUSTNET in $TRUSTNETS
+            do
+                is_ipv6 $TRUSTNET
+                if [ $? -ne "0" ]; then continue; fi
 
-	    $IP6TABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
-	      --destination $1 --protocol icmpv6 --icmpv6-type echo-request --jump ACCEPT
-        done;
-    else
-        for TRUSTNET in $TRUSTNETS
-        do
-            is_ipv6 $TRUSTNET
-            if [ $? -eq "0" ]; then continue; fi
+	        $IP6TABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
+	          --destination $HOST --protocol icmpv6 --icmpv6-type echo-request --jump ACCEPT
+            done;
+        else
+            for TRUSTNET in $TRUSTNETS
+            do
+                is_ipv6 $TRUSTNET
+                if [ $? -eq "0" ]; then continue; fi
 
-	    $IPTABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
-	      --destination $1 --protocol icmp --icmp-type echo-request --jump ACCEPT
-        done;
-    fi
+	        $IPTABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
+	          --destination $HOST --protocol icmp --icmp-type echo-request --jump ACCEPT
+            done;
+       fi
+    done
 }
 
 function BRIDGED_VM_PROTECTED_LIMIT_PING {
-    is_ipv6 $1
-    if [ $? -eq "0" ]; then
-        for TRUSTNET in $TRUSTNETS
-        do
-            is_ipv6 $TRUSTNET
-            if [ $? -ne "0" ]; then continue; fi
+    for HOST in $1
+    do
+        is_ipv6 $HOST
+        if [ $? -eq "0" ]; then
+            for TRUSTNET in $TRUSTNETS
+            do
+                is_ipv6 $TRUSTNET
+                if [ $? -ne "0" ]; then continue; fi
 
-   	    $IP6TABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
-	      --destination $1 --protocol icmpv6 --icmpv6-type echo-request -m limit --limit $2/m --jump ACCEPT
-        done;
-    else
-        for TRUSTNET in $TRUSTNETS
-        do
-            is_ipv6 $TRUSTNET
-            if [ $? -eq "0" ]; then continue; fi
+   	        $IP6TABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
+	          --destination $HOST --protocol icmpv6 --icmpv6-type echo-request \
+                  -m limit --limit $2/m --jump ACCEPT
+            done;
+        else
+            for TRUSTNET in $TRUSTNETS
+            do
+                is_ipv6 $TRUSTNET
+                if [ $? -eq "0" ]; then continue; fi
 
-   	    $IPTABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
-	      --destination $1 --protocol icmp --icmp-type echo-request -m limit --limit $2/m --jump ACCEPT
-        done;
-    fi
+   	        $IPTABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
+	          --destination $HOST --protocol icmp --icmp-type echo-request \
+                  -m limit --limit $2/m --jump ACCEPT
+            done;
+        fi
+    done
 }
 
 function BRIDGED_VM_PROTECTED_TCP_PORT {	
-    is_ipv6 $1
-    if [ $? -eq "0" ]; then
-        for TRUSTNET in $TRUSTNETS
-        do
-            is_ipv6 $TRUSTNET
-            if [ $? -ne "0" ]; then continue; fi
+    for HOST in $1
+    do
+        is_ipv6 $HOST
+        if [ $? -eq "0" ]; then
+            for TRUSTNET in $TRUSTNETS
+            do
+                is_ipv6 $TRUSTNET
+                if [ $? -ne "0" ]; then continue; fi
 
-   	    $IP6TABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
-	      --destination $1 --protocol tcp --dport $2 --jump ACCEPT
-        done;
-    else
-        for TRUSTNET in $TRUSTNETS
-        do
-            is_ipv6 $TRUSTNET
-            if [ $? -eq "0" ]; then continue; fi
+   	        $IP6TABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
+	          --destination $HOST --protocol tcp --dport $2 --jump ACCEPT
+            done;
+        else
+            for TRUSTNET in $TRUSTNETS
+            do
+                is_ipv6 $TRUSTNET
+                if [ $? -eq "0" ]; then continue; fi
 
-   	    $IPTABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
-	      --destination $1 --protocol tcp --dport $2 --jump ACCEPT
-        done;
-    fi
+   	        $IPTABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
+	          --destination $HOST --protocol tcp --dport $2 --jump ACCEPT
+            done;
+        fi
+    done
 }
 
 function BRIDGED_VM_PROTECTED_UDP_PORT {
-    is_ipv6 $1
-    if [ $? -eq "0" ]; then
-        for TRUSTNET in $TRUSTNETS
-        do
-            is_ipv6 $TRUSTNET
-            if [ $? -ne "0" ]; then continue; fi
+    for HOST in $1
+    do
+        is_ipv6 $HOST
+        if [ $? -eq "0" ]; then
+            for TRUSTNET in $TRUSTNETS
+            do
+                is_ipv6 $TRUSTNET
+                if [ $? -ne "0" ]; then continue; fi
 
-	    $IP6TABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
-	      --destination $1 --protocol udp --dport $2 --jump ACCEPT
-        done;
-    else
-        for TRUSTNET in $TRUSTNETS
-        do
-            is_ipv6 $TRUSTNET
-            if [ $? -eq "0" ]; then continue; fi
+	        $IP6TABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
+	          --destination $HOST --protocol udp --dport $2 --jump ACCEPT
+            done;
+        else
+            for TRUSTNET in $TRUSTNETS
+            do
+                is_ipv6 $TRUSTNET
+                if [ $? -eq "0" ]; then continue; fi
 
-	    $IPTABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
-	      --destination $1 --protocol udp --dport $2 --jump ACCEPT
-        done;
-    fi
+	        $IPTABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
+	          --destination $HOST --protocol udp --dport $2 --jump ACCEPT
+            done;
+        fi
+    done
 }
 
 function BRIDGED_VM_PROTECTED_PORT {
-    is_ipv6 $1
-    if [ $? -eq "0" ]; then
-        for TRUSTNET in $TRUSTNETS
-        do
-            is_ipv6 $TRUSTNET
-            if [ $? -ne "0" ]; then continue; fi
+    for HOST in $1
+    do
+        is_ipv6 $HOST
+        if [ $? -eq "0" ]; then
+            for TRUSTNET in $TRUSTNETS
+            do
+                is_ipv6 $TRUSTNET
+                if [ $? -ne "0" ]; then continue; fi
 
-	    $IP6TABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
-	      --destination $1 --dport $2 --jump ACCEPT
-	done;
-    else
-        for TRUSTNET in $TRUSTNETS
-        do
-            is_ipv6 $TRUSTNET
-            if [ $? -eq "0" ]; then continue; fi
+	        $IP6TABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
+	          --destination $HOST --dport $2 --jump ACCEPT
+	    done;
+        else
+            for TRUSTNET in $TRUSTNETS
+            do
+                is_ipv6 $TRUSTNET
+                if [ $? -eq "0" ]; then continue; fi
 
-	    $IPTABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
-	      --destination $1 --dport $2 --jump ACCEPT
-	done;
-    fi
+	        $IPTABLES --table filter --insert $VM_CHAIN 1 --source $TRUSTNET \
+	          --destination $HOST --dport $2 --jump ACCEPT
+	    done;
+       fi
+    done
 }
 
 function COMMON_BRIDGED_VM_ALLOW_PING {
@@ -845,8 +883,10 @@ function INIT_FW {
 
     # Init LOG_DROP user chain
     if [ "$LOG_INVALID_PACKETS" -eq "1" ]; then
-	$IPTABLES --table filter --append $LOGDROP_CHAIN --jump LOG --log-prefix 'IPTABLES: ' --log-level info;
-	$IP6TABLES --table filter --append $LOGDROP_CHAIN --jump LOG --log-prefix 'IP6TABLES: ' --log-level info;
+	$IPTABLES --table filter --append $LOGDROP_CHAIN --jump LOG \
+          --log-prefix 'IPTABLES: ' --log-level info;
+	$IP6TABLES --table filter --append $LOGDROP_CHAIN --jump LOG \
+          --log-prefix 'IP6TABLES: ' --log-level info;
     fi
 
     $IPTABLES --table filter --append $LOGDROP_CHAIN --jump DROP
